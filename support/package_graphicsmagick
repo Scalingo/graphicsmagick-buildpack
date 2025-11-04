@@ -72,9 +72,6 @@ popd
 echo ">>> Creating GraphicsMagick archive"
 archive="GraphicsMagick-${GRAPHICS_MAGICK_VERSION}.tar.gz"
 
-echo "  file: ${gm_local_path}"
-echo "   dir: ${vendored_graphicsmagick_dir}"
-echo "     .: $( pwd )"
 tar --create --gzip \
 	--file "${archive}" \
 	--directory="${vendored_graphicsmagick_dir}" \
