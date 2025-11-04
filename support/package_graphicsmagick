@@ -12,60 +12,70 @@ function mktmpdir() {
 }
 
 function archive_download() {
-  local url="$1"
-  local location="$2"
+	local url="${1}"
+	local location="${2}"
 
-  mkdir -p $location
-  curl -L $url -s -o - | tar xzf - -C $location --strip-components 1
+	mkdir -p "${location}"
+	curl --location --silent "${url}" --output - \
+		| tar --extract --xz --file - --directory="${location}" \
+			--strip-components 1
 }
 
-source $(dirname $0)/../configs.sh
+source "$( dirname "${0}" )/../configs.sh"
+source "$( dirname "${0}" )/lib/upload_buildpack_to_s3.sh"
 
-if [ "$S3_ACCESS_KEY" == "" ]; then
-  echo "must set S3_ACCESS_KEY"
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+  echo "must set AWS_ACCESS_KEY_ID"
   exit 1
 fi
 
-if [ "$S3_SECRET_KEY" == "" ]; then
-  echo "must set S3_SECRET_KEY"
+if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+  echo "must set AWS_SECRET_ACCESS_KEY"
   exit 1
 fi
 
-if [ "$STACK" == "" ]; then
+if [ -z "$AWS_SESSION_TOKEN" ]; then
+  echo "must set AWS_SESSION_TOKEN"
+  exit 1
+fi
+
+if [ -z "$STACK" ]; then
   echo "must set STACK to the scalingo stack being compiled for (i.e. STACK=scalingo-20)"
   exit 1
 fi
 
-pushd $(dirname $0)/.. >>/dev/null
-home=$(pwd)
-popd >>/dev/null
+pushd "$( dirname "${0}" )/.." >> /dev/null
+home="$( pwd )"
+popd >> /dev/null
 
-VENDOR_GRAPHICS_MAGICK_ARCHIVE_URL="${VENDOR_GRAPHICS_MAGICK_ARCHIVE_URL:-"https://sourceforge.net/projects/graphicsmagick/files/graphicsmagick/${GRAPHICS_MAGICK_VERSION}/GraphicsMagick-${GRAPHICS_MAGICK_VERSION}.tar.gz/download"}"
-
+VENDOR_GRAPHICS_MAGICK_ARCHIVE_URL="${VENDOR_GRAPHICS_MAGICK_ARCHIVE_URL:-"https://sourceforge.net/projects/graphicsmagick/files/graphicsmagick/${GRAPHICS_MAGICK_VERSION}/GraphicsMagick-${GRAPHICS_MAGICK_VERSION}.tar.xz/download"}"
 basedir="$(cd -P "$(dirname "$0")" && pwd)"
 
-echo ">>> Downloading graphicsmagick"
+echo ">>> Downloading GraphicsMagick"
 
 # vendor directories
-vendored_graphicsmagick_dir="$(mktmpdir graphicsmagick)"
-archive_download "$VENDOR_GRAPHICS_MAGICK_ARCHIVE_URL" "$vendored_graphicsmagick_dir"
+vendored_graphicsmagick_dir="$( mktmpdir graphicsmagick )"
+archive_download "${VENDOR_GRAPHICS_MAGICK_ARCHIVE_URL}" "${vendored_graphicsmagick_dir}"
 
-echo ">>> Building graphicsmagick"
+echo ">>> Building GraphicsMagick"
 
-gm_local_path=/tmp/graphicsmagick-${GRAPHICS_MAGICK_VERSION}.tar.gz
-gm_lib_path=${BUILD_DIR}/vendor/graphicsmagick
-mkdir -p $gm_lib_path
+gm_local_path="/tmp/graphicsmagick-${GRAPHICS_MAGICK_VERSION}.tar.xz"
+gm_lib_path="${BUILD_DIR}/vendor/graphicsmagick"
+mkdir -p "${gm_lib_path}"
 
-pushd $vendored_graphicsmagick_dir
+pushd "${vendored_graphicsmagick_dir}"
 ./configure
 make
-make DESTDIR=$gm_lib_path install
+make DESTDIR="${gm_lib_path}" install
 popd
 
-echo ">>> Creating graphicsmagick archive"
+echo ">>> Creating GraphicsMagick archive"
+archive="GraphicsMagick-${GRAPHICS_MAGICK_VERSION}.tar.gz"
 
-tar -czf $gm_local_path -C $vendored_graphicsmagick_dir .
+tar --create --gzip \
+	--file "${archive}" \
+	--directory="${vendored_graphicsmagick_dir}" \
+	.
 
-echo ">>> Uploading graphicsmagick"
-echo "    from $gm_local_path file"
-${basedir}/lib/upload_buildpack_to_s3.sh "${REMOTE_PATH}" "${gm_local_path}"
+echo ">>> Uploading GraphicsMagick from ${archive} file"
+s3_upload "${GRAPHICS_MAGICK_S3_BUCKET}" "${archive}" "${REMOTE_PATH}"
