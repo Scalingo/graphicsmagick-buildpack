@@ -51,7 +51,7 @@ popd >> /dev/null
 VENDOR_GRAPHICS_MAGICK_ARCHIVE_URL="${VENDOR_GRAPHICS_MAGICK_ARCHIVE_URL:-"https://sourceforge.net/projects/graphicsmagick/files/graphicsmagick/${GRAPHICS_MAGICK_VERSION}/GraphicsMagick-${GRAPHICS_MAGICK_VERSION}.tar.xz/download"}"
 basedir="$(cd -P "$(dirname "$0")" && pwd)"
 
-echo ">>> Downloading GraphicsMagick"
+echo ">>> Downloading GraphicsMagick ${GRAPHICS_MAGICK_VERSION}"
 
 # vendor directories
 vendored_graphicsmagick_dir="$( mktmpdir graphicsmagick )"
