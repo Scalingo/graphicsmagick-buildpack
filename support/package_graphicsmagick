@@ -64,7 +64,13 @@ gm_lib_path="${BUILD_DIR}/vendor/graphicsmagick"
 mkdir -p "${gm_lib_path}"
 
 pushd "${vendored_graphicsmagick_dir}"
-./configure
+# On scalingo-24, the HEIF support fails to compile because the libheif version is too old.
+# If customers want HEIF support, they need to use scalingo-26.
+if [ "$STACK" = "scalingo-24" ]; then
+  ./configure --without-heif
+else
+  ./configure
+fi
 make
 make DESTDIR="${gm_lib_path}" install
 popd
